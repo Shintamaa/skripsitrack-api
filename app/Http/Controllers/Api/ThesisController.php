@@ -7,19 +7,30 @@ use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ActivityLog;
+use App\Models\Submission;
 
 class ThesisController extends Controller
 {
     public function index(Request $r)
     {
         $u = $r->user();
+
         $q = Thesis::with(['student:id,name,nim_nidn', 'supervisor:id,name'])
-            ->withCount('stages');
+            ->withCount([
+                'stages',
+                'stages as done_stages_count' => fn($s) => $s->where('status', 'selesai'),
+            ])
+            ->where($u->role === 'dosen' ? 'supervisor_id' : 'student_id', $u->id);
 
-        $q->where($u->role === 'dosen' ? 'supervisor_id' : 'student_id', $u->id);
-
-        if ($r->filled('q'))      $q->where('title', 'like', '%' . $r->q . '%');
-        if ($r->filled('status')) $q->where('status', $r->status);
+        if ($r->filled('q')) {
+            $q->where(function ($w) use ($r) {
+                $w->where('title', 'like', '%' . $r->q . '%')
+                ->orWhereHas('student', fn($s) => $s->where('name', 'like', '%' . $r->q . '%'));
+            });
+        }
+        if ($r->filled('status')) {
+            $q->where('status', $r->status);
+        }
 
         return response()->json(['success' => true, 'data' => $q->latest()->get()]);
     }
@@ -59,9 +70,10 @@ class ThesisController extends Controller
     {
         abort_unless($thesis->student_id === $r->user()->id, 403);
         $data = $r->validate([
-            'title' => 'sometimes|string|max:255',
+            'title'       => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|in:berjalan,selesai,ditunda',
+            'status'      => 'sometimes|in:berjalan,selesai,ditunda',
+            'start_date'  => 'nullable|date',
             'target_date' => 'nullable|date',
         ]);
         $thesis->update($data);
@@ -71,6 +83,11 @@ class ThesisController extends Controller
     public function destroy(Request $r, Thesis $thesis)
     {
         abort_unless($thesis->student_id === $r->user()->id, 403);
+
+        $paths = Submission::whereHas('stage', fn($q) => $q->where('thesis_id', $thesis->id))
+            ->pluck('file_path');
+        Storage::disk('public')->delete($paths->all());
+
         $thesis->delete();
         return response()->json(['success' => true, 'message' => 'Skripsi dihapus']);
     }
