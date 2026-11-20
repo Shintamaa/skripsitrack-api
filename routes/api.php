@@ -39,4 +39,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:dosen')->group(function () {
         Route::patch('/submissions/{submission}/status', [SubmissionController::class, 'updateStatus']);
     });
+
+    Route::get('/stages/{stage}', [StageController::class, 'show']);
 });

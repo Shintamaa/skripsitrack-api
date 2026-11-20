@@ -62,8 +62,14 @@ class ThesisController extends Controller
     public function show(Request $r, Thesis $thesis)
     {
         abort_unless($thesis->canAccess($r->user()), 403);
-        return response()->json(['success' => true,
-            'data' => $thesis->load(['student:id,name', 'supervisor:id,name', 'stages'])]);
+
+        $thesis->load([
+            'student:id,name,nim_nidn',
+            'supervisor:id,name',
+            'stages' => fn($q) => $q->withCount('submissions'),
+        ]);
+
+        return response()->json(['success' => true, 'data' => $thesis]);
     }
 
     public function update(Request $r, Thesis $thesis)

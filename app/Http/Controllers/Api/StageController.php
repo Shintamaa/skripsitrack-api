@@ -18,6 +18,21 @@ class StageController extends Controller
             'data' => $thesis->stages()->withCount('submissions')->get()]);
     }
 
+    public function show(Request $r, ThesisStage $stage)
+    {
+        abort_unless($stage->thesis->canAccess($r->user()), 403);
+
+        $stage->load([
+            'thesis:id,title,student_id,supervisor_id,status',
+            'submissions.comments',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $stage
+        ]);
+    }
+
     public function update(Request $r, ThesisStage $stage)
     {
         abort_unless($stage->thesis->canAccess($r->user()), 403);
