@@ -44,7 +44,7 @@ class DashboardController extends Controller
     {
         $col = $r->user()->role === 'dosen' ? 'supervisor_id' : 'student_id';
         $q = ActivityLog::whereIn('thesis_id', Thesis::where($col, $r->user()->id)->pluck('id'))
-            ->with('user:id,name')->latest();
+            ->with('user:id,name')->latest()->latest('id');
         if ($r->filled('action')) $q->where('action', $r->action);
         return response()->json(['success' => true, 'data' => $q->paginate(20)]);
     }

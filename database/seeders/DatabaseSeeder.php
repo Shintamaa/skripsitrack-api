@@ -5,11 +5,20 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\{User, Thesis, ThesisStage, Submission, Comment, ActivityLog};
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Berkas contoh agar tautan unggahan seeder benar-benar bisa dibuka
+        $sample = database_path('seeders/files/contoh.pdf');
+        if (file_exists($sample)) {
+            foreach (['contoh.pdf', 'contoh_bab1_v1.pdf', 'contoh_bab1_v2.pdf'] as $f) {
+                Storage::disk('public')->put("submissions/$f", file_get_contents($sample));
+            }
+        }
+
         $dosen = User::create([
             'name' => 'Dr. Budi Santoso, M.Kom',
             'email' => 'dosen@test.com',
@@ -86,5 +95,56 @@ class DatabaseSeeder extends Seeder
             'action' => 'upload',
             'description' => 'Mengunggah BAB I versi 2'
         ]);
+
+        User::create([
+            'name' => 'Dr. Siti Rahma, M.T.', 'email' => 'dosen2@test.com',
+            'role' => 'dosen', 'nim_nidn' => '198505052010012002',
+            'password' => Hash::make('password'),
+        ]);
+
+        $mhs2 = User::create([
+            'name' => 'Rizky Ramadhan', 'email' => 'mahasiswa2@test.com',
+            'role' => 'mahasiswa', 'nim_nidn' => '2403114301',
+            'password' => Hash::make('password'),
+        ]);
+
+        // Mahasiswa tanpa skripsi: untuk menampilkan kondisi data kosong
+        User::create([
+            'name' => 'Salsabila Putri', 'email' => 'mahasiswa3@test.com',
+            'role' => 'mahasiswa', 'nim_nidn' => '2403114302',
+            'password' => Hash::make('password'),
+        ]);
+
+        $t2 = Thesis::create([
+            'student_id' => $mhs2->id, 'supervisor_id' => $dosen->id,
+            'title' => 'Rancang Bangun Aplikasi Reservasi Ruang Berbasis Android',
+            'start_date' => now()->subMonths(2), 'target_date' => now()->addMonths(4),
+        ]);
+
+        foreach ($stages as $i => $name) {
+            $target = match (true) {
+                $i < 3     => now()->subWeeks(3 - $i),   // sudah lewat dan selesai
+                $i === 3   => now()->subDays(5),         // terlambat
+                default    => now()->addWeeks($i - 3),
+            };
+
+            $stage = ThesisStage::create([
+                'thesis_id'    => $t2->id, 'name' => $name, 'sort_order' => $i + 1,
+                'target_date'  => $target,
+                'completed_at' => $i < 3 ? $target : null,
+                'status'       => $i < 3 ? 'selesai' : ($i === 3 ? 'proses' : 'belum'),
+            ]);
+
+            if ($i < 3) {
+                Submission::create(['stage_id' => $stage->id, 'version' => 1,
+                    'file_path' => 'submissions/contoh.pdf', 'file_type' => 'pdf',
+                    'note' => "Draf {$name}", 'status' => 'disetujui']);
+            }
+            if ($i === 3) {
+                Submission::create(['stage_id' => $stage->id, 'version' => 1,
+                    'file_path' => 'submissions/contoh.pdf', 'file_type' => 'pdf',
+                    'note' => 'Draf awal metodologi', 'status' => 'menunggu']);
+            }
+        }
     }
 }
