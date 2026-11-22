@@ -2,6 +2,8 @@
 
 return [
 
+    'dosen_invite_code' => env('DOSEN_INVITE_CODE', 'DOSEN2026'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Name
