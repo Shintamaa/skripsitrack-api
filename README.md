@@ -19,6 +19,11 @@ Backend REST API untuk aplikasi **SkripsiTrack** (Sistem Monitoring Progres Tuga
    composer install
    copy .env.example .env
    php artisan key:generate
+
+    # Kode yang harus diisi saat mendaftar sebagai dosen
+    DOSEN_INVITE_CODE=DOSEN2026
+
+    Ganti `DOSEN_INVITE_CODE` dengan kode lain jika dipakai di luar keperluan demo. Setelah mengubah `.env`, jalankan `php       artisan config:clear`.
 ```
 3. Buat database kosong `skripsitrack` (HeidiSQL/phpMyAdmin), lalu cek kredensial di `.env`
    (`DB_DATABASE=skripsitrack`, `DB_USERNAME=root`, `DB_PASSWORD=` kosong).
